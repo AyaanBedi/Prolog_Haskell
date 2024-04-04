@@ -202,71 +202,38 @@ expr2 = token (term >>= rest)
 term = token (constant <|> paren expr2)
 rest e1 = do {p <- op; e2 <- term; rest (Bin p e1 e2)} <|> return e1
 
---Natural Language Processing
-
-data Sentence = STree NP VP
-            deriving (Read, Show, Eq)
-data NP = N Noun | NPhrase Der Noun  | Nphrase2 Noun PP 
-            deriving (Read, Show, Eq)
-data PP = Past1 P NP | Past2 P Noun -- past2 is uselsss but let it be 
-            deriving (Read, Show, Eq)
-data VP  = VPhrase Verb NP 
-            deriving (Read, Show, Eq)
-data Noun = Jack | Jill | Car | Hill
-            deriving (Read, Show, Eq)
-data Verb = Plays  | Runs | Drives
-            deriving (Read, Show, Eq)
-data P = In | On
-            deriving (Read, Show, Eq)
-data Der = The | A
-            deriving (Read, Show, Eq)
-
-split = do {e1 <- nphrasec; p <- verbc; e2 <- nphrasec; return (STree e1 (VPhrase p e2))} 
-
-verbc = (symbol "plays" >> return Plays) <|> (symbol "runs" >> return Runs)
-         <|> (symbol "drives" >> return Drives)
-
-nphrasec = token ( do { p <- derc; e2 <- nounc; return (NPhrase p e2)} <|> do {p <- nounc; e <- partc; return (Nphrase2 p e)} <|> do { p <- nounc; return (N p)})
-
-partc = token (do {p <- prepc; np <- nounc; return (Past2 p np)} <|> do { p<- prepc; np <- nphrasec; return (Past1 p np)})  
-
-prepc = (symbol "on" >> return On) <|> (symbol "in" >> return In)
-
-nounc = (symbol "Jack" >> return Jack) <|> (symbol "Jill" >> return Jill) <|> (symbol "car" >> return Car) <|> (symbol "hill" >> return Hill)
-
-
-derc = (symbol "The" >> return The) <|> (symbol "A" >> return A) <|> (symbol "a" >> return A) <|>  (symbol "the" >> return The)
-   
-decompose::String -> Sentence
-decompose str = let y = head (parse split str) 
-                    in (if ((snd y)==[]) then fst y else error "not fully parsed") 
-                      
 
 
 
+data Sentence = Fact F | Rule R deriving (Show, Read)
 data F = F String Var deriving (Show, Read)
 data Var = V String | V' Var Var deriving (Show, Read)
 
-data Rule = R1 String Var F | R2 String Var Rule deriving (Show, Read)
+data R = R1 String Var F | R2 String Var R deriving (Show, Read)
 
 opP :: Parser Char
 opP = char '('
 
 parseFact :: Parser F
-parseFact = do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')'; char '.'; return (F e1 (V e2))
+parseFact = token (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')'; char '.'; return (F e1 (V e2)))
 
-parseRule = (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseRule; return (R2 e1 (V e2) e3) ) <|> (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseFact ; return (R1 e1 (V e2) e3) ) 
+parseRule =  token ((do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseRule; return (R2 e1 (V e2) e3) ) <|> (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseFact ; return (R1 e1 (V e2) e3) ) )
 
+
+
+parseStatement = token ( (do e1 <- parseRule ; return (Rule e1)) <|> (do e1 <- parseFact ; return (Fact e1) )) 
 
 decompose4::String -> [F] 
 decompose4 str = let y = head (parse parseFact str) 
                      in (if ((snd y)==[]) then [fst y] else (fst y):(decompose4 (snd y)))
                      
-decompose5::String -> [Rule] 
+decompose5::String -> [R] 
 decompose5 str = let y = head (parse parseRule str) 
                      in (if ((snd y)==[]) then [fst y] else (fst y):(decompose5 (snd y)))
-
-
+                     
+decomposeSatement :: String -> [Sentence] 
+decomposeSatement str = let y = head (parse parseStatement str) 
+                        in (if ((snd y)==[]) then [fst y] else (fst y):(decomposeSatement (snd y)))
 
 
 
