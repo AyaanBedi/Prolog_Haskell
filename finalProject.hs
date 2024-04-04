@@ -235,6 +235,18 @@ decomposeSatement :: String -> [Sentence]
 decomposeSatement str = let y = head (parse parseStatement str) 
                         in (if ((snd y)==[]) then [fst y] else (fst y):(decomposeSatement (snd y)))
 
+isFact :: Sentence -> Bool
+isFact (Fact k) = True 
+isFact _ = False 
+
+factList = filter(\x -> isFact x)
+
+
+isRule :: Sentence -> Bool 
+isRule (Rule k) = True 
+isRule _ = False 
+
+ruleList = filter(\x -> isRule x) 
 
 
 
