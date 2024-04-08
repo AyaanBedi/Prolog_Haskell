@@ -235,20 +235,34 @@ decomposeSatement :: String -> [Sentence]
 decomposeSatement str = let y = head (parse parseStatement str) 
                         in (if ((snd y)==[]) then [fst y] else (fst y):(decomposeSatement (snd y)))
 
-isFact :: Sentence -> Bool
-isFact (Fact k) = True 
-isFact _ = False 
 
-factList = filter(\x -> isFact x)
+notnothing:: Maybe F -> Bool 
+notnothing Nothing = False 
+notnothing _ = True 
+
+factList = filter(\x -> notnothing x)
+
+fulldecomp:: [Sentence] -> ([Maybe F] , [R])
+fulldecomp [] = ([],[])
+fulldecomp ((Fact x):xs) = let ((a,b) = (fulldecomp xs ))
+                                y = factList (map (rule2fact x) b)
+                                in 
+                                ((y++(Just x):a) , b) 
 
 
-isRule :: Sentence -> Bool 
-isRule (Rule k) = True 
-isRule _ = False 
+--((y++(Just x):a) , b) 
+  --                                 where 
+    --                               (a,b) = fulldecomp xs
+      --                              y = factList (map (rule2fact x) b)
+                                                                     
+fulldecomp ((Rule x):xs) = (a , (x:b)) where (a,b) = fulldecomp xs
 
-ruleList = filter(\x -> isRule x) 
 
-fulldecomp:: [Sentence] -> ([Sentence] , [Sentence]) 
-fulldecomp xs = (factList xs , ruleList xs)
+ruletofact:: F -> R -> (Maybe F )
+ruletofact (F s3 v2) (R1 s (F s2 v1)) = if (s2==s3) then (Just (F s v2)) else Nothing
+
+
+
+
 
 
