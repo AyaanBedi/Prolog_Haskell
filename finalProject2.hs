@@ -209,7 +209,7 @@ data Sentence = Fact F | Rule R deriving (Show, Read)
 data F = F String Var deriving (Show, Read)
 data Var = V String | V' Var Var deriving (Show, Read)
 
-data R = R1 String Var F | R2 String Var R deriving (Show, Read)
+data R = R1 String F | R2 String Var R deriving (Show, Read)
 
 opP :: Parser Char
 opP = char '('
@@ -217,7 +217,7 @@ opP = char '('
 parseFact :: Parser F
 parseFact = token (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')'; char '.'; return (F e1 (V e2)))
 
-parseRule =  token ((do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseRule; return (R2 e1 (V e2) e3) ) <|> (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseFact ; return (R1 e1 (V e2) e3) ) )
+parseRule =  token ((do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseRule; return (R2 e1 (V e2) e3) ) <|> (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseFact ; return (R1 e1 e3) ) )
 
 
 
