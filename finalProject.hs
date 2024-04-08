@@ -206,11 +206,11 @@ rest e1 = do {p <- op; e2 <- term; rest (Bin p e1 e2)} <|> return e1
 
 
 
-data Sentence = Fact F | Rule R deriving (Show, Read)
-data F = F String Var deriving (Show, Read)
-data Var = V String | V' Var Var deriving (Show, Read)
+data Sentence = Fact F | Rule R deriving (Show, Read, Eq)
+data F = F String Var deriving (Show, Read, Eq)
+data Var = V String | V' Var Var deriving (Show, Read, Eq)
 
-data R = R1 String Var F | R2 String Var R deriving (Show, Read)
+data R = R1 String Var F | R2 String Var R deriving (Show, Read, Eq)
 
 opP :: Parser Char
 opP = char '('
@@ -252,7 +252,15 @@ ruleList = filter(\x -> isRule x)
 fulldecomp:: [Sentence] -> ([Sentence] , [Sentence]) 
 fulldecomp xs = (factList xs , ruleList xs)
 
+checkFactQuery :: [Sentence] -> Sentence -> Bool
+checkFactQuery [] _ = False
+checkFactQuery (f:fs) cf = (cf == f) || checkFactQuery fs cf
+
 main :: IO ()
 main = do
   contents <- readFile "family.pl"
-  putStrLn contents
+  --putStrLn (fulldecomp (decomposeSatement contents))
+  putStrLn "?> " 
+  query <- getLine
+  checking <- print (checkFactQuery (fst (fulldecomp (decomposeSatement contents))) (head (decomposeSatement query)))
+  return ()
