@@ -244,23 +244,19 @@ factList = filter(\x -> notnothing x)
 
 fulldecomp:: [Sentence] -> ([Maybe F] , [R])
 fulldecomp [] = ([],[])
-fulldecomp ((Fact x):xs) = let ((a,b) = (fulldecomp xs ))
-                                y = factList (map (rule2fact x) b)
+fulldecomp ((Fact x):xs) = let (a,b) = (fulldecomp xs )
                                 in 
-                                ((y++(Just x):a) , b) 
-
-
---((y++(Just x):a) , b) 
-  --                                 where 
-    --                               (a,b) = fulldecomp xs
-      --                              y = factList (map (rule2fact x) b)
-                                                                     
+                                (((Just x):a) , b)                   
 fulldecomp ((Rule x):xs) = (a , (x:b)) where (a,b) = fulldecomp xs
+
+finaldecomp:: [Maybe F] -> [R] -> [Maybe F] 
+finaldecomp [] r = []
+finaldecomp (((Just f)):xs) r = let {y = map (ruletofact f) r ; y2 = finaldecomp xs r } in (((Just f):y)++y2) 
+finaldecomp ((Nothing):xs) r = finaldecomp xs r
 
 
 ruletofact:: F -> R -> (Maybe F )
 ruletofact (F s3 v2) (R1 s (F s2 v1)) = if (s2==s3) then (Just (F s v2)) else Nothing
-
 
 
 
