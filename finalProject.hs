@@ -23,6 +23,7 @@
 
 import Control.Applicative
 import Data.Char
+import System.IO
 
 newtype Parser a = P (String -> [(a,String)])
 
@@ -251,4 +252,7 @@ ruleList = filter(\x -> isRule x)
 fulldecomp:: [Sentence] -> ([Sentence] , [Sentence]) 
 fulldecomp xs = (factList xs , ruleList xs)
 
-
+main :: IO ()
+main = do
+  contents <- readFile "family.pl"
+  putStrLn contents
