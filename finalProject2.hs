@@ -245,6 +245,7 @@ factList = filter(\x -> notnothing x)
 fulldecomp:: [Sentence] -> ([Maybe F] , [R])
 fulldecomp [] = ([],[])
 fulldecomp ((Fact x):xs) = let {(a,b) = (fulldecomp xs ); y = factList (map (ruletofact x) b)} in ((y++(Just x):a) , b) 
+
                                                                      
 fulldecomp ((Rule x):xs) = (a , (x:b)) where (a,b) = fulldecomp xs
 
