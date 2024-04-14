@@ -205,11 +205,11 @@ rest e1 = do {p <- op; e2 <- term; rest (Bin p e1 e2)} <|> return e1
 
 
 
-data Sentence = Fact F | Rule R deriving (Show, Read)
-data F = F String Var deriving (Show, Read)
-data Var = V String | V' Var Var deriving (Show, Read)
+data Sentence = Fact F | Rule R deriving (Show, Read,Eq)
+data F = F String Var deriving (Show, Read, Eq)
+data Var = V String | V' Var Var deriving (Show, Read,Eq)
 
-data R = R1 String F | R2 String Var R deriving (Show, Read)
+data R = R1 String F | R2 String Var R deriving (Show, Read,Eq)
 
 opP :: Parser Char
 opP = char '('
@@ -258,13 +258,21 @@ finaldecomp ((Nothing):xs) r = finaldecomp xs r
 ruletofact:: F -> R -> (Maybe F )
 ruletofact (F s3 v2) (R1 s (F s2 v1)) = if (s2==s3) then (Just (F s v2)) else Nothing
 
+search :: [Maybe F] -> F -> Bool
+search [] _ = False
+search (f:fileContents) query = (Just query)==f
+
 main :: IO ()
 main = do
   contents <- readFile "family.pl"
   putStrLn "?> " 
   query <- getLine
-  --search function
-  return ()
+  let x = fulldecomp (decomposeSatement contents)
+      result = search (finaldecomp (fst x) (snd x)) (head (decompose4 query))
+  print result
 
-
-
+{-
+searching <- print (search (finaldecomp (fst x) (snd x)) (head (decompose4 query)))
+   where 
+    x = (fulldecomp (decomposeSatement contents))
+-}
