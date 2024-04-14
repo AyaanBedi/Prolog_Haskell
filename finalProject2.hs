@@ -258,7 +258,13 @@ finaldecomp ((Nothing):xs) r = finaldecomp xs r
 ruletofact:: F -> R -> (Maybe F )
 ruletofact (F s3 v2) (R1 s (F s2 v1)) = if (s2==s3) then (Just (F s v2)) else Nothing
 
-
+main :: IO ()
+main = do
+  contents <- readFile "family.pl"
+  putStrLn "?> " 
+  query <- getLine
+  --search function
+  return ()
 
 
 
