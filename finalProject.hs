@@ -259,8 +259,9 @@ checkFactQuery (f:fs) cf = (cf == f) || checkFactQuery fs cf
 main :: IO ()
 main = do
   contents <- readFile "family.pl"
-  --putStrLn (fulldecomp (decomposeSatement contents))
   putStrLn "?> " 
   query <- getLine
   checking <- print (checkFactQuery (fst (fulldecomp (decomposeSatement contents))) (head (decomposeSatement query)))
   return ()
+
+--search :: (file contents) -> query -> Bool
