@@ -1,4 +1,4 @@
-black(X) :- criminal(X).
+black(X):-criminal(X).
 black(p).
 criminal(n).
 
