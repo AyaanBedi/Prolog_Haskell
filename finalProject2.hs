@@ -216,10 +216,9 @@ opP = char '('
 
 parseFact :: Parser F
 parseFact = token (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')'; char '.'; return (F e1 (V e2)))
+        <|> token (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')'; char '.'; char '\n'; return (F e1 (V e2)))
 
 parseRule =  token ((do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseRule; return (R2 e1 (V e2) e3) ) <|> (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseFact ; return (R1 e1 e3) ) )
-
-
 
 parseStatement = token ( (do e1 <- parseRule ; return (Rule e1)) <|> (do e1 <- parseFact ; return (Fact e1) )) 
 
@@ -259,14 +258,13 @@ ruletofact:: F -> R -> (Maybe F )
 ruletofact (F s3 v2) (R1 s (F s2 v1)) = if (s2==s3) then (Just (F s v2)) else Nothing
 
 search :: [Maybe F] -> F -> Bool
-search [] _ = False
-search (f:fileContents) query = (Just query)==f
+search (x:fileContents) query = if x == (Just query) then True else (search fileContents query || False) 
 
 main :: IO ()
 main = do
   contents <- readFile "family.pl"
   putStrLn "?> " 
-  query <- getLine
+  query <- getLine 
   let x = fulldecomp (decomposeSatement contents)
       result = search (finaldecomp (fst x) (snd x)) (head (decompose4 query))
   print result
