@@ -206,19 +206,40 @@ rest e1 = do {p <- op; e2 <- term; rest (Bin p e1 e2)} <|> return e1
 
 
 data Sentence = Fact F | Rule R deriving (Show, Read,Eq)
-data F = F String Var deriving (Show, Read, Eq)
+data F = F String [Var] deriving (Show, Read, Eq)
 data Var = V String | V' Var Var deriving (Show, Read,Eq)
 
-data R = R1 String F | R2 String Var R deriving (Show, Read,Eq)
+data R = R1 String [Var] [F] | R2 String [Var] R deriving (Show, Read,Eq)
 
 opP :: Parser Char
 opP = char '('
 
-parseFact :: Parser F
-parseFact = token (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')'; char '.'; return (F e1 (V e2)))
-        <|> token (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')'; char '.'; char '\n'; return (F e1 (V e2)))
+parseVar :: Parser Var
+parseVar = token (do v1 <- some alphanum; return (V v1))
+       <|> token (do char ','; v2 <- some alphanum; return (V v2))
 
-parseRule =  token ((do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseRule; return (R2 e1 (V e2) e3) ) <|> (do e1 <- some alphanum ; char '(' ; e2 <- some alphanum ; char ')' ; string ":-" ; e3 <- parseFact ; return (R1 e1 e3) ) )
+decomposeVar :: String -> [Var]
+decomposeVar str = let y = head (parse parseVar str)
+                     in (if ((snd y)==[]) then [fst y] else (fst y):(decomposeVar (snd y)))
+
+parseUntilClosingBracket :: Parser String
+parseUntilClosingBracket = P $ \inp -> case span (/= ')') inp of
+    (parsed, rest) -> [(parsed, dropWhile (== ')') rest)]
+
+parseUntilFullStop :: Parser String
+parseUntilFullStop = P $ \inp -> case span (/= '.') inp of
+    (parsed, rest) -> [(parsed, dropWhile (== '.') rest)]
+
+parseFact :: Parser F
+parseFact = token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char '.'; return (F e1 (decomposeVar e2)))
+        <|> token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char '.'; char '\n'; return (F e1 (decomposeVar e2)))
+
+parseFactForRule :: Parser F
+parseFactForRule = token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char ','; return (F e1 (decomposeVar e2)))
+        <|> token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char ','; char '\n'; return (F e1 (decomposeVar e2)))
+
+parseRule =  token ((do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; string ":-" ; e3 <- parseRule; return (R2 e1 (decomposeVar e2) e3) ) 
+  <|> (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; string ":-" ; e3 <- parseFact ; return (R1 e1 (decomposeVar e2) e3) ) )
 
 parseStatement = token ( (do e1 <- parseRule ; return (Rule e1)) <|> (do e1 <- parseFact ; return (Fact e1) )) 
 
@@ -255,10 +276,14 @@ finaldecomp ((Nothing):xs) r = finaldecomp xs r
 
 
 ruletofact:: F -> R -> (Maybe F )
-ruletofact (F s3 v2) (R1 s (F s2 v1)) = if (s2==s3) then (Just (F s v2)) else Nothing
+ruletofact (F s3 v2) (R1 s rVar (F s2 v1)) = if (s2==s3) then (Just (F s v2)) else Nothing
+
+--ruletofact2 :: F -> R -> Maybe F
+--ruletofact2 (F factName factVars) (R1 ruleName ruleVars ruleFact) = 
 
 search :: [Maybe F] -> F -> Bool
-search (x:fileContents) query = if x == (Just query) then True else (search fileContents query || False) 
+search [] _ = False
+search (x:fileContents) query = if x == (Just query) then True else search fileContents query
 
 main :: IO ()
 main = do
