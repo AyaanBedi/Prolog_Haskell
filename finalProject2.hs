@@ -228,7 +228,7 @@ parseUntilClosingBracket = P $ \inp -> case span (/= ')') inp of
 
 parseUntilFullStop :: Parser String
 parseUntilFullStop = P $ \inp -> case span (/= '.') inp of
-    (parsed, rest) -> [(parsed, dropWhile (== '.') rest)]
+    (parsed, rest) -> [(parsed ++ ".", dropWhile (== '.') rest)]
 
 parseFact :: Parser F
 parseFact = token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char '.'; return (F e1 (decomposeVar e2)))
@@ -237,9 +237,15 @@ parseFact = token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBr
 parseFactForRule :: Parser F
 parseFactForRule = token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char ','; return (F e1 (decomposeVar e2)))
         <|> token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char ','; char '\n'; return (F e1 (decomposeVar e2)))
+        <|> token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char '.'; return (F e1 (decomposeVar e2)))
+        <|> token (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; char '.'; char '\n'; return (F e1 (decomposeVar e2)))
+
+decomposeFactForRule::String -> [F] 
+decomposeFactForRule str = let y = head (parse parseFactForRule str) 
+                     in (if ((snd y)==[]) then [fst y] else (fst y):(decomposeFactForRule (snd y)))
 
 parseRule =  token ((do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; string ":-" ; e3 <- parseRule; return (R2 e1 (decomposeVar e2) e3) ) 
-  <|> (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; string ":-" ; e3 <- parseFact ; return (R1 e1 (decomposeVar e2) e3) ) )
+  <|> (do e1 <- some alphanum ; char '(' ; e2 <- parseUntilClosingBracket ; string ":-" ; e3 <- parseUntilFullStop ; return (R1 e1 (decomposeVar e2) (decomposeFactForRule e3)) ) )
 
 parseStatement = token ( (do e1 <- parseRule ; return (Rule e1)) <|> (do e1 <- parseFact ; return (Fact e1) )) 
 
@@ -261,7 +267,7 @@ notnothing Nothing = False
 notnothing _ = True 
 
 factList = filter(\x -> notnothing x)
-
+{-
 fulldecomp:: [Sentence] -> ([Maybe F] , [R])
 fulldecomp [] = ([],[])
 fulldecomp ((Fact x):xs) = let (a,b) = (fulldecomp xs )
@@ -298,4 +304,5 @@ main = do
 searching <- print (search (finaldecomp (fst x) (snd x)) (head (decompose4 query)))
    where 
     x = (fulldecomp (decomposeSatement contents))
+-}
 -}
