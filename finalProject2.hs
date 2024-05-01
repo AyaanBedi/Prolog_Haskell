@@ -261,12 +261,115 @@ decomposeSatement :: String -> [Sentence]
 decomposeSatement str = let y = head (parse parseStatement str) 
                         in (if ((snd y)==[]) then [fst y] else (fst y):(decomposeSatement (snd y)))
 
+fulldecomp:: [Sentence] -> ([F] , [R])
+fulldecomp [] = ([],[])
+fulldecomp ((Fact x):xs) = let (a,b) = (fulldecomp xs )
+                                in 
+                                (((x):a) , b)                   
+fulldecomp ((Rule x):xs) = (a , (x:b)) where (a,b) = fulldecomp xs
 
 notnothing:: Maybe F -> Bool 
 notnothing Nothing = False 
 notnothing _ = True 
 
 factList = filter(\x -> notnothing x)
+{-
+searchRules :: F -> [R] -> Bool
+searchRules _ [] = False
+searchRules (F queryName queryVars) ((R1 ruleName ruleVars ruleFacts):ruleList) 
+   | queryName==ruleName && (length queryVars)==(length ruleVars) = checkRule (F queryName queryVars) (R1 ruleName ruleVars ruleFacts)
+   | otherwise = searchRules (F queryName queryVars) ruleList
+
+checkRule :: F -> R -> Bool
+checkRule (F _ (qv:queryVars)) (R1 _ (rv:ruleVars) ((F ruleFactName ruleFactVars):ruleFacts)) = 
+
+findRuleVarsInRuleFact :: R -> [F]
+findRuleVarsInRuleFact (R1 _ _ []) = []
+findRuleVarsInRuleFact (R1 x (rv:ruleVars) ((F ruleFactName ruleFactVars):ruleFacts)) = if rv `elem` ruleFactVars 
+   then (F ruleFactName ruleFactVars):findRuleVarsInRuleFact (R1 x (rv:ruleVars) ruleFacts)
+   else findRuleVarsInRuleFact (R1 x (rv:ruleVars) ruleFacts)
+-}
+
+{-
+test:
+fact:
+male(sam).
+male(bob).
+parent(sam,bob).
+rule:
+father(x,y):-male(x),parent(x,y).
+after parsing = [Fact (F "male" [V "sam"]),
+                 Fact (F "male" [V "bob"]),
+                 Fact (F "parent" [V "sam",V "bob"]),
+                 Rule (R1 "father" [V "x",V "y"] [F "male" [V "x"],F "parent" [V "x",V "y"]])]
+query: 
+  father(sam,bob).
+  parsed = [Fact (F "father" [V "sam",V "bob"])]
+
+check through factlist, fail
+check through rule list, match with father(x,y)
+  [Fact (F "FATHER" [V "sam",V "bob"])] = Rule (R1 "FATHER" [V "x",V "y"] [F "male" [V "x"],F "parent" [V "x",V "y"]])]
+equate x and y to sam and bob
+Rule (R1 "father" [V "sam",V "bob"] [F "male" [V "x"],F "parent" [V "x",V "y"]])]
+how do you equate it in the facts for the rule???
+1. given ruleVars, find facts that use that ruleVar. in this case: Rule (R1 "father" [V "x",V "y"] [F "male" [V "x"],F "parent" [V "x",V "y"]])]
+      x is in male and parent. for male, it is simple as only x is present. for parent, x and y are present.
+2. replace all vars with the query vars
+      number of lists = 3
+      list 1 - query vars: [V "sam",V "bob"]
+      list 2 - rule vars: [V "x",V "y"]
+      list 3 - fact vars in the rule: [[V "x"],[V "x",V "y"]] (first one for male, second for parent)
+
+      to replace, go through each rule var in the list of lists and replace with corresponding query var and return the whole list,
+      then move on to the next rule var and ciontinue. return the whole list of facts and search for those facts
+-}
+checkRuleMatch :: F -> [R] -> [R]
+checkRuleMatch _ [] = []
+checkRuleMatch (F queryName factVars) ((R1 ruleName ruleVars ruleFacts):rules) = if queryName==ruleName && length factVars==length ruleVars
+      then R1 ruleName ruleVars ruleFacts:checkRuleMatch (F queryName factVars) rules
+      else checkRuleMatch (F queryName factVars) rules
+
+replaceElement :: Eq a => a -> a -> [a] -> [a]
+replaceElement old new = map (\x -> if x == old then new else x)
+
+replaceVar :: Var -> Var -> [F] -> [F]
+replaceVar _ _ [] = []
+replaceVar old new ((F x varList):factList) = F x (replaceElement old new varList):replaceVar old new factList
+
+replaceVarsFromRule :: F -> R -> [F]
+replaceVarsFromRule (F _ []) (R1 _ [] factList) = factList
+replaceVarsFromRule (F x (qv:queryVars)) (R1 y (rv:ruleVars) factList) = replaceVarsFromRule (F x queryVars) (R1 y ruleVars (replaceVar rv qv factList))
+
+replaceVarsFromAllRules :: F -> [R] -> [[F]]
+replaceVarsFromAllRules _ [] = []
+replaceVarsFromAllRules fact (r:rs) = replaceVarsFromRule fact r:replaceVarsFromAllRules fact rs  
+
+search2 :: [F] -> [F] -> Bool
+search2 derivedFacts fileFacts = all (`elem` fileFacts) derivedFacts
+
+search3 :: [[F]] -> [F] -> Int
+search3 [] _ = 0
+search3 (fs:fss) fileFacts = if search2 fs fileFacts then 1 + search3 fss fileFacts else search3 fss fileFacts
+
+
+search1 :: F -> [F] -> Bool
+search1 _ [] = False
+search1 query (x:fileFacts) = if x==query then True else search1 query fileFacts
+
+main :: IO()
+main = do
+  contents <- readFile "family.pl"
+  putStrLn "?> " 
+  query0 <- getLine
+  let query = head (decompose4 query0)
+      factsAndRules = fulldecomp (decomposeSatement contents)
+      facts = fst factsAndRules
+      rules = snd factsAndRules
+      ruleMatches = checkRuleMatch query rules
+      replacedRules = replaceVarsFromAllRules query ruleMatches
+  if search1 query facts || search3 replacedRules facts > 0
+    then print "True"
+    else print "False"
 {-
 fulldecomp:: [Sentence] -> ([Maybe F] , [R])
 fulldecomp [] = ([],[])

@@ -21,3 +21,5 @@ parentOf(jess,simon).
 parentOf(ali,simon).
 parentOf(lily,harry).
 parentOf(james,harry).
+fatherOf(X,Y):-male(X),parentOf(X,Y).
+motherOf(X,Y):-female(X),parentOf(X,Y).
