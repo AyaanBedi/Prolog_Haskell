@@ -1,6 +1,3 @@
-black(X):-criminal(X).
-black(p).
-criminal(n).
 male(jack).
 male(oliver).
 male(ali).
@@ -23,3 +20,4 @@ parentOf(lily,harry).
 parentOf(james,harry).
 fatherOf(X,Y):-male(X),parentOf(X,Y).
 motherOf(X,Y):-female(X),parentOf(X,Y).
+family(X,Y,Z):-parentOf(X,Y),parentOf(Z,Y).
